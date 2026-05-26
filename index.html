@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Wirerod LIVE</title>
+  <title>Wirerod stock</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <style>
     body { font-family: Arial; padding: 15px; max-width: 500px; margin:auto; }
@@ -15,10 +15,10 @@
 </head>
 <body>
 
-<h2>WIREROD LIVE STOCK</h2>
+<h2>WIREROD STOK</h2>
 
 <div class="box">
-  <h3>Stok Semasa</h3>
+  <h3>Stok</h3>
   <div id="stock"></div>
 </div>
 
@@ -51,108 +51,51 @@
   <div id="history"></div>
 </div>
 
-<!-- FIREBASE -->
-<script type="module">
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-import { getFirestore, doc, getDoc, setDoc, updateDoc, onSnapshot, arrayUnion } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+<script>
+let sizes = ["R5.5","R6.5","R7.0","R8.0","R8.5","R9.0","R9.5","R10","R11","R13"];
 
-/* 🔥 PASTE CONFIG FIREBASE ANDA DI SINI */
-const firebaseConfig = {
-  apiKey: "PASTE_HERE",
-  authDomain: "PASTE_HERE",
-  projectId: "PASTE_HERE",
-  storageBucket: "PASTE_HERE",
-  messagingSenderId: "PASTE_HERE",
-  appId: "PASTE_HERE"
-};
+let stock = JSON.parse(localStorage.getItem("stock") || "{}");
+let history = JSON.parse(localStorage.getItem("history") || "[]");
 
-const app = initializeApp(firebaseConfig);
-const db = getFirestore(app);
+sizes.forEach(s => {
+  if(stock[s] === undefined) stock[s] = 0;
+});
 
-const sizes = ["R5.5","R6.5","R7.0","R8.0","R8.5","R9.0","R9.5","R10","R11","R13"];
-
-const stockRef = doc(db, "wirerod", "stock");
-const historyRef = doc(db, "wirerod", "history");
-
-/* INIT DATA */
-async function init(){
-  const s = await getDoc(stockRef);
-  if(!s.exists()){
-    let data = {};
-    sizes.forEach(x => data[x]=0);
-    await setDoc(stockRef, data);
-    await setDoc(historyRef, {list:[]});
-  }
+function save(){
+  localStorage.setItem("stock", JSON.stringify(stock));
+  localStorage.setItem("history", JSON.stringify(history));
+  render();
 }
-init();
 
-/* LIVE LISTENER */
-onSnapshot(stockRef, (docSnap)=>{
-  let data = docSnap.data() || {};
+function add(){
+  let s = document.getElementById("size").value;
+  let q = parseInt(document.getElementById("qty").value);
+  if(!q) return;
+  stock[s] += q;
+  history.unshift({type:"Masuk", size:s, qty:q, date:new Date().toLocaleString()});
+  save();
+}
+
+function remove(){
+  let s = document.getElementById("size").value;
+  let q = parseInt(document.getElementById("qty").value);
+  if(!q || stock[s] < q) return alert("Stok tak cukup");
+  stock[s] -= q;
+  history.unshift({type:"Guna", size:s, qty:q, date:new Date().toLocaleString()});
+  save();
+}
+
+function render(){
   document.getElementById("stock").innerHTML =
-    sizes.map(s => `<div>${s} : <b>${data[s]||0}</b></div>`).join("");
-});
+    sizes.map(s => `<div>${s} : <b>${stock[s]}</b></div>`).join("");
 
-/* HISTORY LISTENER */
-onSnapshot(historyRef, (docSnap)=>{
-  let data = docSnap.data() || {list:[]};
-  let h = data.list || [];
   document.getElementById("history").innerHTML =
-    h.slice().reverse().map(x =>
-      `<div>${x.date} - ${x.type} ${x.size} (${x.qty})</div>`
+    history.slice(0,20).map(h =>
+      `<div>${h.date} - ${h.type} ${h.size} (${h.qty})</div>`
     ).join("");
-});
-
-/* UPDATE STOCK */
-window.add = async function(){
-  let size = document.getElementById("size").value;
-  let qty = parseInt(document.getElementById("qty").value);
-  if(!qty) return;
-
-  const snap = await getDoc(stockRef);
-  let data = snap.data();
-
-  data[size] = (data[size] || 0) + qty;
-
-  await setDoc(stockRef, data);
-
-  await updateDoc(historyRef, {
-    list: arrayUnion({
-      type:"Masuk",
-      size,
-      qty,
-      date:new Date().toLocaleString()
-    })
-  });
 }
 
-/* REMOVE STOCK */
-window.remove = async function(){
-  let size = document.getElementById("size").value;
-  let qty = parseInt(document.getElementById("qty").value);
-  if(!qty) return;
-
-  const snap = await getDoc(stockRef);
-  let data = snap.data();
-
-  if((data[size]||0) < qty){
-    alert("Stok tak cukup");
-    return;
-  }
-
-  data[size] -= qty;
-
-  await setDoc(stockRef, data);
-
-  await updateDoc(historyRef, {
-    list: arrayUnion({
-      type:"Guna",
-      size,
-      qty,
-      date:new Date().toLocaleString()
-    })
-  });
-}
+render();
 </script>
 
 </body>
