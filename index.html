@@ -15,7 +15,7 @@
 </head>
 <body>
 
-<h2>WIREROD STOK</h2>
+<h2>WIREROD STOCK</h2>
 
 <div class="box">
   <h3>Stok</h3>
@@ -27,6 +27,7 @@
 
   <select id="size">
     <option>R5.5</option>
+    <option>R6.0</option>
     <option>R6.5</option>
     <option>R7.0</option>
     <option>R8.0</option>
@@ -52,7 +53,7 @@
 </div>
 
 <script>
-let sizes = ["R5.5","R6.5","R7.0","R8.0","R8.5","R9.0","R9.5","R10","R11","R13"];
+let sizes = ["R5.5","R6.0","R6.5","R7.0","R8.0","R8.5","R9.0","R9.5","R10","R11","R13"];
 
 let stock = JSON.parse(localStorage.getItem("stock") || "{}");
 let history = JSON.parse(localStorage.getItem("history") || "[]");
