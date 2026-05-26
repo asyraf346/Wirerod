@@ -1,99 +1,159 @@
-export default function WireRodApp() { const sizes = ['R5.5','R6.5','R7.0','R8.0','R8.5','R9.0','R9.5','R10','R11','R13']; const types = ['1T','2T'];
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Wirerod LIVE</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    body { font-family: Arial; padding: 15px; max-width: 500px; margin:auto; }
+    h2 { text-align:center; }
+    .box { border:1px solid #ddd; padding:10px; margin:10px 0; border-radius:10px; }
+    select, input, button { width:100%; padding:10px; margin-top:5px; }
+    button { cursor:pointer; }
+    .btn { display:flex; gap:10px; }
+    .btn button { flex:1; }
+  </style>
+</head>
+<body>
 
-const getInitialStock = () => { const saved = localStorage.getItem('wirerod-stock-v2'); if (saved) return JSON.parse(saved);
+<h2>WIREROD LIVE STOCK</h2>
 
-const init = {};
-sizes.forEach(s => {
-  init[s] = { '1T': 0, '2T': 0 };
-});
-return init;
+<div class="box">
+  <h3>Stok Semasa</h3>
+  <div id="stock"></div>
+</div>
 
-};
+<div class="box">
+  <h3>Kemaskini</h3>
 
-const getHistory = () => { const saved = localStorage.getItem('wirerod-history-v2'); return saved ? JSON.parse(saved) : []; };
+  <select id="size">
+    <option>R5.5</option>
+    <option>R6.5</option>
+    <option>R7.0</option>
+    <option>R8.0</option>
+    <option>R8.5</option>
+    <option>R9.0</option>
+    <option>R9.5</option>
+    <option>R10</option>
+    <option>R11</option>
+    <option>R13</option>
+  </select>
 
-const [stock, setStock] = React.useState(getInitialStock); const [history, setHistory] = React.useState(getHistory); const [size, setSize] = React.useState('R5.5'); const [type, setType] = React.useState('1T'); const [qty, setQty] = React.useState('');
+  <input type="number" id="qty" placeholder="Jumlah coil">
 
-React.useEffect(() => { localStorage.setItem('wirerod-stock-v2', JSON.stringify(stock)); }, [stock]);
-
-React.useEffect(() => { localStorage.setItem('wirerod-history-v2', JSON.stringify(history)); }, [history]);
-
-const updateStock = (mode) => { const num = Number(qty); if (!num || num <= 0) return alert('Masukkan jumlah coil');
-
-const current = stock[size][type] || 0;
-
-if (mode === 'keluar' && num > current) {
-  return alert('Stok tak cukup');
-}
-
-const newStock = { ...stock };
-newStock[size][type] = mode === 'masuk' ? current + num : current - num;
-
-setStock(newStock);
-
-setHistory([
-  {
-    date: new Date().toLocaleString('ms-MY'),
-    mode,
-    size,
-    type,
-    qty: num,
-  },
-  ...history,
-]);
-
-setQty('');
-
-};
-
-return ( <div className='p-4 max-w-lg mx-auto'> <h1 className='text-2xl font-bold mb-4'>WIREROD STOK</h1>
-
-<div className='bg-white border rounded-2xl p-4 mb-4'>
-    <h2 className='font-bold mb-2'>Stok Semasa</h2>
-    {sizes.map(s => (
-      <div key={s} className='mb-2 border-b pb-2'>
-        <div className='font-bold'>{s}</div>
-        <div className='text-sm'>1T: {stock[s]['1T']}</div>
-        <div className='text-sm'>2T: {stock[s]['2T']}</div>
-      </div>
-    ))}
-  </div>
-
-  <div className='bg-white border rounded-2xl p-4 mb-4'>
-    <h2 className='font-bold mb-2'>Kemaskini Stok</h2>
-
-    <select value={size} onChange={e => setSize(e.target.value)} className='w-full p-2 border rounded mb-2'>
-      {sizes.map(s => <option key={s}>{s}</option>)}
-    </select>
-
-    <select value={type} onChange={e => setType(e.target.value)} className='w-full p-2 border rounded mb-2'>
-      {types.map(t => <option key={t}>{t}</option>)}
-    </select>
-
-    <input
-      type='number'
-      value={qty}
-      onChange={e => setQty(e.target.value)}
-      placeholder='Jumlah coil'
-      className='w-full p-2 border rounded mb-2'
-    />
-
-    <div className='flex gap-2'>
-      <button onClick={() => updateStock('masuk')} className='flex-1 bg-gray-200 p-2 rounded'>+ Masuk</button>
-      <button onClick={() => updateStock('keluar')} className='flex-1 bg-gray-300 p-2 rounded'>- Guna</button>
-    </div>
-  </div>
-
-  <div className='bg-white border rounded-2xl p-4'>
-    <h2 className='font-bold mb-2'>History</h2>
-    <div className='max-h-60 overflow-auto text-sm'>
-      {history.length === 0 ? 'Tiada rekod' : history.map((h, i) => (
-        <div key={i} className='border-b py-1'>
-          {h.date} - {h.mode === 'masuk' ? 'Masuk' : 'Guna'} {h.size} {h.type} ({h.qty})
-        </div>
-      ))}
-    </div>
+  <div class="btn">
+    <button onclick="add()">+ Masuk</button>
+    <button onclick="remove()">- Guna</button>
   </div>
 </div>
 
-); }
+<div class="box">
+  <h3>History</h3>
+  <div id="history"></div>
+</div>
+
+<!-- FIREBASE -->
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import { getFirestore, doc, getDoc, setDoc, updateDoc, onSnapshot, arrayUnion } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+/* 🔥 PASTE CONFIG FIREBASE ANDA DI SINI */
+const firebaseConfig = {
+  apiKey: "PASTE_HERE",
+  authDomain: "PASTE_HERE",
+  projectId: "PASTE_HERE",
+  storageBucket: "PASTE_HERE",
+  messagingSenderId: "PASTE_HERE",
+  appId: "PASTE_HERE"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+
+const sizes = ["R5.5","R6.5","R7.0","R8.0","R8.5","R9.0","R9.5","R10","R11","R13"];
+
+const stockRef = doc(db, "wirerod", "stock");
+const historyRef = doc(db, "wirerod", "history");
+
+/* INIT DATA */
+async function init(){
+  const s = await getDoc(stockRef);
+  if(!s.exists()){
+    let data = {};
+    sizes.forEach(x => data[x]=0);
+    await setDoc(stockRef, data);
+    await setDoc(historyRef, {list:[]});
+  }
+}
+init();
+
+/* LIVE LISTENER */
+onSnapshot(stockRef, (docSnap)=>{
+  let data = docSnap.data() || {};
+  document.getElementById("stock").innerHTML =
+    sizes.map(s => `<div>${s} : <b>${data[s]||0}</b></div>`).join("");
+});
+
+/* HISTORY LISTENER */
+onSnapshot(historyRef, (docSnap)=>{
+  let data = docSnap.data() || {list:[]};
+  let h = data.list || [];
+  document.getElementById("history").innerHTML =
+    h.slice().reverse().map(x =>
+      `<div>${x.date} - ${x.type} ${x.size} (${x.qty})</div>`
+    ).join("");
+});
+
+/* UPDATE STOCK */
+window.add = async function(){
+  let size = document.getElementById("size").value;
+  let qty = parseInt(document.getElementById("qty").value);
+  if(!qty) return;
+
+  const snap = await getDoc(stockRef);
+  let data = snap.data();
+
+  data[size] = (data[size] || 0) + qty;
+
+  await setDoc(stockRef, data);
+
+  await updateDoc(historyRef, {
+    list: arrayUnion({
+      type:"Masuk",
+      size,
+      qty,
+      date:new Date().toLocaleString()
+    })
+  });
+}
+
+/* REMOVE STOCK */
+window.remove = async function(){
+  let size = document.getElementById("size").value;
+  let qty = parseInt(document.getElementById("qty").value);
+  if(!qty) return;
+
+  const snap = await getDoc(stockRef);
+  let data = snap.data();
+
+  if((data[size]||0) < qty){
+    alert("Stok tak cukup");
+    return;
+  }
+
+  data[size] -= qty;
+
+  await setDoc(stockRef, data);
+
+  await updateDoc(historyRef, {
+    list: arrayUnion({
+      type:"Guna",
+      size,
+      qty,
+      date:new Date().toLocaleString()
+    })
+  });
+}
+</script>
+
+</body>
+</html>
