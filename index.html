@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Wirerod Stok</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    body { font-family: Arial; padding: 15px; max-width: 500px; margin:auto; }
+    h2 { text-align:center; }
+    .box { border:1px solid #ddd; padding:10px; margin:10px 0; border-radius:10px; }
+    select, input, button { width:100%; padding:10px; margin-top:5px; }
+    button { cursor:pointer; }
+    .btn { display:flex; gap:10px; }
+    .btn button { flex:1; }
+  </style>
+</head>
+<body>
+
+<h2>WIREROD STOK</h2>
+
+<div class="box">
+  <h3>Stok</h3>
+  <div id="stock"></div>
+</div>
+
+<div class="box">
+  <h3>Kemaskini</h3>
+
+  <select id="size">
+    <option>R5.5</option>
+    <option>R6.5</option>
+    <option>R7.0</option>
+    <option>R8.0</option>
+    <option>R8.5</option>
+    <option>R9.0</option>
+    <option>R9.5</option>
+    <option>R10</option>
+    <option>R11</option>
+    <option>R13</option>
+  </select>
+
+  <input type="number" id="qty" placeholder="Jumlah coil">
+
+  <div class="btn">
+    <button onclick="add()">+ Masuk</button>
+    <button onclick="remove()">- Guna</button>
+  </div>
+</div>
+
+<div class="box">
+  <h3>History</h3>
+  <div id="history"></div>
+</div>
+
+<script>
+let sizes = ["R5.5","R6.5","R7.0","R8.0","R8.5","R9.0","R9.5","R10","R11","R13"];
+
+let stock = JSON.parse(localStorage.getItem("stock") || "{}");
+let history = JSON.parse(localStorage.getItem("history") || "[]");
+
+sizes.forEach(s => {
+  if(stock[s] === undefined) stock[s] = 0;
+});
+
+function save(){
+  localStorage.setItem("stock", JSON.stringify(stock));
+  localStorage.setItem("history", JSON.stringify(history));
+  render();
+}
+
+function add(){
+  let s = document.getElementById("size").value;
+  let q = parseInt(document.getElementById("qty").value);
+  if(!q) return;
+  stock[s] += q;
+  history.unshift({type:"Masuk", size:s, qty:q, date:new Date().toLocaleString()});
+  save();
+}
+
+function remove(){
+  let s = document.getElementById("size").value;
+  let q = parseInt(document.getElementById("qty").value);
+  if(!q || stock[s] < q) return alert("Stok tak cukup");
+  stock[s] -= q;
+  history.unshift({type:"Guna", size:s, qty:q, date:new Date().toLocaleString()});
+  save();
+}
+
+function render(){
+  document.getElementById("stock").innerHTML =
+    sizes.map(s => `<div>${s} : <b>${stock[s]}</b></div>`).join("");
+
+  document.getElementById("history").innerHTML =
+    history.slice(0,20).map(h =>
+      `<div>${h.date} - ${h.type} ${h.size} (${h.qty})</div>`
+    ).join("");
+}
+
+render();
+</script>
+
+</body>
+</html>
